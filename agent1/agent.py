@@ -4,13 +4,20 @@ from google.genai.types import HarmCategory, HarmBlockThreshold, SafetySetting
 from tools import log_reader_tool # Only LogReaderTool is needed now
 from google.adk.models.lite_llm import LiteLlm
 import os
+from pydantic import BaseModel, Field
+from typing import Dict, Any
 
 
 # Initialize the model
 model = LiteLlm(
-    model="openrouter/deepseek/deepseek-chat-v3-0324:free",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="openrouter/google/gemma-3-27b-it:free",
+    api_key="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",
 )
+
+class JSONInput(BaseModel):
+    # Changed logData to log_data and type to Dict[str, Any] to accept a JSON object
+    instruction: str = Field(description="High-level instruction for the agent.")
+    log_data: Dict[str, Any] = Field(description="Raw customer session log data to be analyzed.")
 
 class PolicyAnalystAgent(LlmAgent):
     def __init__(self, **kwargs):
@@ -22,6 +29,11 @@ class PolicyAnalystAgent(LlmAgent):
             Your primary task is to deeply analyze raw customer session log data, identify distinct fraud patterns
             by examining the 'fraud_scenario' and associated session/user profile details, and then generate
             Rego policies for each identified fraud scenario.
+
+
+            ***Crucially, your input will be a JSON string with two main keys:**
+            * `"instruction"`: This will contain your high-level directive (e.g., "analyze logs and generate Rego policies").
+            * `"log_data"`: This will contain the raw JSON log data itself, specifically the `fraud_detection_logs` object. This `log_data` will be a parsed JSON object (Python dictionary), not a string.
 
             **Here's your refined workflow:**
             1.  **Understand the Request:** The user will provide a path to a JSON log file.
@@ -58,24 +70,7 @@ class PolicyAnalystAgent(LlmAgent):
             * **Time-Based Logic (in Rego):** If a pattern is time-sensitive (e.g., velocity), aim to incorporate `time.parse_rfc3339()` and `time.diff()` if possible within Rego, or simplify if necessary by relying on pre-calculated fields like `account_age_days`. Given the current structure, direct `time.diff` on event timestamps is harder for the LLM to write perfectly, so focus on `account_age_days` and general counts/values, but acknowledge the need for time-based logic where relevant.
             * **Explanations:** Each policy should have a good `description` explaining the logic.
             """,
-            tools=[log_reader_tool], # Only LogReaderTool
-        #     safety_settings=[
-        #         SafetySetting(
-        #             category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-        #             threshold=HarmBlockThreshold.BLOCK_NONE.value
-        #         ),
-        #         SafetySetting(
-        #             category=HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-        #             threshold=HarmBlockThreshold.BLOCK_NONE.value
-        #         ),
-        #         SafetySetting(
-        #             category=HarmCategory.HARM_CATEGORY_HARASSMENT,
-        #             threshold=HarmBlockThreshold.BLOCK_NONE.value
-        #         ),
-        #         SafetySetting(
-        #             category=HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-        #             threshold=HarmBlockThreshold.BLOCK_NONE.value
-        #         ),
-        #     ]
+            input_schema=JSONInput,
+            output_key="rego policies",  # Store final JSON response
         )
         
