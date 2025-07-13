@@ -11,7 +11,7 @@ from typing import Dict, Any
 # Initialize the model
 model = LiteLlm(
     model="openrouter/google/gemma-3-27b-it:free",
-    api_key="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",
+    api_key="",
 )
 
 class JSONInput(BaseModel):
