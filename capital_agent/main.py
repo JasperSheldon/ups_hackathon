@@ -28,7 +28,7 @@ class CapitalInfoOutput(BaseModel):
 
 model = LiteLlm(
     model=MODEL_NAME,
-    api_key="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",
+    api_key="",
     # headers={
     #     "HTTP-Referer": "https://github.com/JasperSheldon/machine-learning-models",
     #     "X-Title": "Capital City Information Agent"
